@@ -1325,9 +1325,8 @@ function drawSceneCanvas(octx, s, i, W, H, img){
   const bg  = STATE.design.bgColor||'#1a1a2e';
   const acc = ['#7c6af7','#5eead4','#f472b6','#fbbf24','#34d399','#a78bfa'][i%6];
 
-  // Fondo base
-  octx.fillStyle = bg;
-  octx.fillRect(0,0,W,H);
+  // Canvas transparente - sin fondo sólido para evitar solapamiento en vista general
+  octx.clearRect(0,0,W,H);
 
   // Grid sutil
   octx.strokeStyle = acc+'18'; octx.lineWidth=1;
@@ -1448,9 +1447,6 @@ function buildViewerCanvas(){
     const oc = document.createElement('canvas');
     oc.width = W; oc.height = H;
     const octx = oc.getContext('2d');
-    // Fondo base siempre del color de diseño
-    octx.fillStyle = STATE.design.bgColor||'#1a1a2e';
-    octx.fillRect(0,0,W,H);
     const entry = {canvas: oc, _img: null};
     if(s.image){
       const im = new Image();
@@ -1671,7 +1667,7 @@ function rebuildCurrentScene(mode){
 function drawSceneCanvasNoText(octx, s, i, W, H, img){
   const bg  = STATE.design.bgColor||'#1a1a2e';
   const acc = ['#7c6af7','#5eead4','#f472b6','#fbbf24','#34d399','#a78bfa'][i%6];
-  octx.fillStyle=bg; octx.fillRect(0,0,W,H);
+  octx.clearRect(0,0,W,H);
   octx.strokeStyle=acc+'18'; octx.lineWidth=1;
   for(let x=0;x<W;x+=W/8){octx.beginPath();octx.moveTo(x,0);octx.lineTo(x,H);octx.stroke();}
   for(let y=0;y<H;y+=H/5){octx.beginPath();octx.moveTo(0,y);octx.lineTo(W,y);octx.stroke();}
@@ -2032,7 +2028,7 @@ function drawCircleWithText(octx,s,cx,cy,r,acc,W,H){
 function drawSceneCanvas(octx,s,i,W,H,img){
   const bg=DESIGN.bgColor||'#1a1a2e';
   const acc=ACCS[i%ACCS.length];
-  octx.fillStyle=bg;octx.fillRect(0,0,W,H);
+  octx.clearRect(0,0,W,H);
   octx.strokeStyle=acc+'18';octx.lineWidth=1;
   for(let x=0;x<W;x+=W/8){octx.beginPath();octx.moveTo(x,0);octx.lineTo(x,H);octx.stroke();}
   for(let y=0;y<H;y+=H/5){octx.beginPath();octx.moveTo(0,y);octx.lineTo(W,y);octx.stroke();}
@@ -2061,7 +2057,7 @@ function drawSceneCanvas(octx,s,i,W,H,img){
 function drawSceneCanvasNoText(octx,s,i,W,H,img){
   const bg=DESIGN.bgColor||'#1a1a2e';
   const acc=ACCS[i%ACCS.length];
-  octx.fillStyle=bg;octx.fillRect(0,0,W,H);
+  octx.clearRect(0,0,W,H);
   octx.strokeStyle=acc+'18';octx.lineWidth=1;
   for(let x=0;x<W;x+=W/8){octx.beginPath();octx.moveTo(x,0);octx.lineTo(x,H);octx.stroke();}
   for(let y=0;y<H;y+=H/5){octx.beginPath();octx.moveTo(0,y);octx.lineTo(W,y);octx.stroke();}
@@ -2099,8 +2095,6 @@ function buildViewerCanvas(){
     const oc=document.createElement('canvas');
     oc.width=W;oc.height=H;
     const octx=oc.getContext('2d');
-    octx.fillStyle=DESIGN.bgColor||'#1a1a2e';
-    octx.fillRect(0,0,W,H);
     const entry={canvas:oc,_img:null};
     if(s.image){
       const im=new Image();
