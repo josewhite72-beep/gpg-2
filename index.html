@@ -1349,7 +1349,7 @@ function drawSceneCanvas(octx, s, i, W, H, img){
     const rw = iw*scale, rh = ih*scale;
     octx.drawImage(img, cx-rw/2, cy-rh/2, rw, rh);
     // Overlay semitransparente para legibilidad del texto
-    octx.fillStyle = 'rgba(0,0,0,0.42)';
+    
     octx.fill();
     octx.restore();
   } else {
@@ -1391,6 +1391,11 @@ function drawCircleWithText(octx, s, cx, cy, r, acc, W, H){
   octx.fillStyle  = d.textColor || '#ffffff';
   octx.textAlign  = 'center';
   octx.textBaseline = 'middle';
+  // Sombra fuerte para legibilidad sobre cualquier imagen
+  octx.shadowColor = 'rgba(0,0,0,0.85)';
+  octx.shadowBlur  = 8;
+  octx.shadowOffsetX = 1;
+  octx.shadowOffsetY = 1;
 
   // Calcular líneas para centrar verticalmente todo el bloque
   const enLines = getWrappedLines(octx, enText, maxTW);
@@ -1682,7 +1687,7 @@ function drawSceneCanvasNoText(octx, s, i, W, H, img){
     const scale=Math.max((r*2)/iw,(r*2)/ih);
     const rw=iw*scale,rh=ih*scale;
     octx.drawImage(img,cx-rw/2,cy-rh/2,rw,rh);
-    octx.fillStyle='rgba(0,0,0,0.25)'; octx.fill();
+    
     octx.restore();
   } else {
     octx.beginPath(); octx.arc(cx,cy,r,0,Math.PI*2);
@@ -2043,7 +2048,7 @@ function drawSceneCanvas(octx,s,i,W,H,img){
     const scale=Math.max((r*2)/iw,(r*2)/ih);
     const rw=iw*scale,rh=ih*scale;
     octx.drawImage(img,cx-rw/2,cy-rh/2,rw,rh);
-    octx.fillStyle='rgba(0,0,0,0.42)';octx.fill();
+    
     octx.restore();
   }else{
     octx.beginPath();octx.arc(cx,cy,r,0,Math.PI*2);
@@ -2072,7 +2077,7 @@ function drawSceneCanvasNoText(octx,s,i,W,H,img){
     const scale=Math.max((r*2)/iw,(r*2)/ih);
     const rw=iw*scale,rh=ih*scale;
     octx.drawImage(img,cx-rw/2,cy-rh/2,rw,rh);
-    octx.fillStyle='rgba(0,0,0,0.25)';octx.fill();
+    
     octx.restore();
   }else{
     octx.beginPath();octx.arc(cx,cy,r,0,Math.PI*2);
