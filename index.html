@@ -1348,9 +1348,6 @@ function drawSceneCanvas(octx, s, i, W, H, img){
     const scale = Math.max((r*2)/iw, (r*2)/ih);
     const rw = iw*scale, rh = ih*scale;
     octx.drawImage(img, cx-rw/2, cy-rh/2, rw, rh);
-    // Overlay semitransparente para legibilidad del texto
-    
-    octx.fill();
     octx.restore();
   } else {
     // Sin imagen: círculo relleno con color acento
