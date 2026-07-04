@@ -116,6 +116,15 @@ select option{background:var(--surface2)}
 .btn-danger{background:var(--danger);color:#fff}
 .btn-row{display:flex;gap:10px;margin-top:20px}
 .btn-row .btn{flex:1}
+.manual-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:12px;margin-bottom:10px;display:flex;gap:10px;align-items:flex-start}
+.manual-card img{width:72px;height:72px;object-fit:cover;border-radius:8px;flex-shrink:0;border:1px solid var(--border2)}
+.manual-card-body{flex:1;min-width:0;display:flex;flex-direction:column;gap:6px}
+.manual-card-num{font-size:11px;font-weight:700;color:var(--accent);margin-bottom:2px}
+.manual-card-body input,.manual-card-body textarea{width:100%;background:var(--surface2);border:1px solid var(--border2);border-radius:var(--r);color:var(--text);font-family:'Space Grotesk',sans-serif;font-size:13px;padding:8px 10px;outline:none}
+.manual-card-body textarea{min-height:52px;resize:vertical}
+.manual-order-btns{display:flex;flex-direction:column;gap:4px;flex-shrink:0}
+.manual-order-btns button{background:var(--surface2);border:1px solid var(--border2);color:var(--text);width:32px;height:32px;border-radius:8px;font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.manual-order-btns button:disabled{opacity:.25;cursor:default}
 
 /* ── MEDUCA SECTION ── */
 .meduca-toggle{display:flex;align-items:center;gap:10px;cursor:pointer;margin-bottom:12px}
@@ -571,7 +580,20 @@ input[type=color]{width:28px;height:28px;border:none;border-radius:50%;cursor:po
 
   <div class="btn-row">
     <button class="btn btn-ghost" id="back-to-input">← Volver</button>
-    <button class="btn btn-primary" id="to-step-gen">✨ Generar →</button>
+    <button class="btn btn-primary" id="to-step-gen">✨ IA →</button>
+  </div>
+  <button class="btn btn-ghost" id="to-step-manual" style="width:100%;margin-top:8px">✏️ Crear manualmente →</button>
+</section>
+
+<!-- ══ PASO MANUAL ══ -->
+<section class="step" id="step-manual">
+  <div class="step-eyebrow">Modo manual</div>
+  <h2 class="step-title">Organiza tus <em>escenas</em></h2>
+  <p class="step-desc">Reordena con ↑ ↓ y agrega texto a cada imagen.</p>
+  <div id="manual-list"></div>
+  <div class="btn-row" style="margin-top:20px">
+    <button class="btn btn-ghost" id="manual-back">← Volver</button>
+    <button class="btn btn-primary" id="manual-done">Ver presentación →</button>
   </div>
 </section>
 
@@ -963,7 +985,91 @@ $('to-step-gen').onclick = async ()=>{
 };
 
 // ═══════════════════════════════════════════════════════
-// PASO 3 — GENERAR CON IA
+// MODO MANUAL
+// ═══════════════════════════════════════════════════════
+let manualScenes = [];
+
+function renderManualList() {
+  const list = $('manual-list');
+  list.innerHTML = '';
+  manualScenes.forEach((scene, i) => {
+    const card = document.createElement('div');
+    card.className = 'manual-card';
+    card.innerHTML = `
+      <div class="manual-order-btns">
+        <button class="up-btn" data-i="${i}" ${i===0?'disabled':''}>↑</button>
+        <button class="dn-btn" data-i="${i}" ${i===manualScenes.length-1?'disabled':''}>↓</button>
+      </div>
+      <img src="${scene.dataUrl}" alt="Escena ${i+1}">
+      <div class="manual-card-body">
+        <div class="manual-card-num">Escena ${i+1} — ${scene.name}</div>
+        <textarea placeholder="Texto en inglés..." data-i="${i}" data-field="textEn">${scene.textEn||''}</textarea>
+        <input type="text" placeholder="Fonética IPA (ej: /wɛðər/)" data-i="${i}" data-field="phonetics" value="${scene.phonetics||''}">
+      </div>
+    `;
+    list.appendChild(card);
+  });
+
+  list.querySelectorAll('.up-btn').forEach(btn => {
+    btn.onclick = () => {
+      const i = +btn.dataset.i;
+      if(i === 0) return;
+      [manualScenes[i-1], manualScenes[i]] = [manualScenes[i], manualScenes[i-1]];
+      renderManualList();
+    };
+  });
+  list.querySelectorAll('.dn-btn').forEach(btn => {
+    btn.onclick = () => {
+      const i = +btn.dataset.i;
+      if(i === manualScenes.length-1) return;
+      [manualScenes[i], manualScenes[i+1]] = [manualScenes[i+1], manualScenes[i]];
+      renderManualList();
+    };
+  });
+  list.querySelectorAll('[data-field]').forEach(el => {
+    el.addEventListener('input', () => {
+      manualScenes[+el.dataset.i][el.dataset.field] = el.value;
+    });
+  });
+}
+
+$('to-step-manual').onclick = () => {
+  if(STATE.images.length === 0) { toast('⚠️ Sube imágenes primero en el Paso 1'); return; }
+  STATE.title = $('cfg-title').value.trim() || 'Mi Presentación';
+  manualScenes = STATE.images.map(img => ({
+    dataUrl: img.dataUrl,
+    name: img.name,
+    textEn: '',
+    phonetics: ''
+  }));
+  renderManualList();
+  // Mostrar paso manual sin tocar goStep del flujo IA
+  document.querySelectorAll('.step').forEach(s => s.classList.remove('active'));
+  $('step-manual').classList.add('active');
+  window.scrollTo(0,0);
+};
+
+$('manual-back').onclick = () => {
+  document.querySelectorAll('.step').forEach(s => s.classList.remove('active'));
+  $('step-config').classList.add('active');
+  window.scrollTo(0,0);
+};
+
+$('manual-done').onclick = () => {
+  if(manualScenes.length === 0) { toast('⚠️ No hay imágenes'); return; }
+  STATE.scenes = manualScenes.map((s, i) => ({
+    scene: i+1,
+    label: `Escena ${i+1}`,
+    textEn: s.textEn || '',
+    textEs: '',
+    phonetics: s.phonetics || '',
+    image: s.dataUrl,
+    zoom: { x:35, y:30, w:30, h:40 }
+  }));
+  STATE.activeMode = STATE.outputs[0] || 'presentation';
+  renderExportStep();
+  goStep(3);
+};
 // ═══════════════════════════════════════════════════════
 const SKILL_TEMPLATES = {
   listening:  ['Cover','Learning Goal','Vocabulary Preview','Listening Task','Comprehension Check','Reflection'],
