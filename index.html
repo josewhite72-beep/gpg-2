@@ -476,6 +476,15 @@ input[type=color]{width:28px;height:28px;border:none;border-radius:50%;cursor:po
     <div class="card-title">🎨 Diseño visual</div>
 
     <div class="design-section">
+      <span class="design-label">Forma de escena</span>
+      <div class="pill-group" id="shape-grid">
+        <button class="pill active" data-shape="circle">⬤ Círculo</button>
+        <button class="pill" data-shape="square">■ Cuadrado</button>
+        <button class="pill" data-shape="rect">▬ Tarjeta</button>
+      </div>
+    </div>
+
+    <div class="design-section">
       <span class="design-label">Fuente</span>
       <div class="font-grid" id="font-grid">
         <div class="font-opt active" data-font="'Space Grotesk',sans-serif" data-name="Space Grotesk">
@@ -723,7 +732,8 @@ const STATE = {
     font: "'Space Grotesk',sans-serif",
     fontSize: 18,
     textColor: '#ffffff',
-    bgColor: '#1a1a2e'
+    bgColor: '#1a1a2e',
+    shape: 'circle'
   },
   scenes: []
 };
@@ -927,6 +937,15 @@ $('meduca-toggle').onclick = ()=>{
 // ═══════════════════════════════════════════════════════
 // DISEÑO VISUAL
 // ═══════════════════════════════════════════════════════
+
+// Forma de escena
+document.querySelectorAll('#shape-grid .pill').forEach(btn => {
+  btn.onclick = () => {
+    document.querySelectorAll('#shape-grid .pill').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    STATE.design.shape = btn.dataset.shape;
+  };
+});
 
 // Fuentes
 document.querySelectorAll('.font-opt').forEach(el=>{
@@ -1427,46 +1446,100 @@ window.addEventListener('resize', ()=>{
 // Todas las escenas pre-renderizadas en offscreen canvases
 let vSceneCanvases = [];
 
+function ztRoundRect(ctx,x,y,w,h,r,topOnly=false){
+  ctx.beginPath();
+  ctx.moveTo(x+r,y);ctx.lineTo(x+w-r,y);ctx.arcTo(x+w,y,x+w,y+r,r);
+  if(topOnly){ctx.lineTo(x+w,y+h);ctx.lineTo(x,y+h);}
+  else{ctx.lineTo(x+w,y+h-r);ctx.arcTo(x+w,y+h,x+w-r,y+h,r);ctx.lineTo(x+r,y+h);ctx.arcTo(x,y+h,x,y+h-r,r);}
+  ctx.lineTo(x,y+r);ctx.arcTo(x,y,x+r,y,r);ctx.closePath();
+}
+
 function drawSceneCanvas(octx, s, i, W, H, img){
-  const bg  = STATE.design.bgColor||'#1a1a2e';
-  const acc = ['#7c6af7','#5eead4','#f472b6','#fbbf24','#34d399','#a78bfa'][i%6];
+  const bg    = STATE.design.bgColor||'#1a1a2e';
+  const acc   = ['#7c6af7','#5eead4','#f472b6','#fbbf24','#34d399','#a78bfa'][i%6];
+  const shape = STATE.design.shape || 'circle';
+  const d     = STATE.design;
+  const cx = W/2, cy = H/2;
 
-  // Canvas transparente - sin fondo sólido para evitar solapamiento en vista general
   octx.clearRect(0,0,W,H);
-
   // Grid sutil
-  octx.strokeStyle = acc+'18'; octx.lineWidth=1;
+  octx.strokeStyle=acc+'18'; octx.lineWidth=1;
   for(let x=0;x<W;x+=W/8){octx.beginPath();octx.moveTo(x,0);octx.lineTo(x,H);octx.stroke();}
   for(let y=0;y<H;y+=H/5){octx.beginPath();octx.moveTo(0,y);octx.lineTo(W,y);octx.stroke();}
 
-  const r  = Math.min(W,H) * 0.38; // círculo más grande ahora que tiene imagen
-  const cx = W/2, cy = H/2;
+  if(shape==='circle'){
+    const r=Math.min(W,H)*0.38;
+    if(img){
+      octx.save();octx.beginPath();octx.arc(cx,cy,r,0,Math.PI*2);octx.clip();
+      const iw=img.naturalWidth,ih=img.naturalHeight;
+      const sc=Math.max((r*2)/iw,(r*2)/ih);
+      octx.drawImage(img,cx-iw*sc/2,cy-ih*sc/2,iw*sc,ih*sc);
+      octx.restore();
+    }else{octx.beginPath();octx.arc(cx,cy,r,0,Math.PI*2);octx.fillStyle=acc+'22';octx.fill();}
+    octx.shadowColor=acc+'66';octx.shadowBlur=18;
+    octx.beginPath();octx.arc(cx,cy,r,0,Math.PI*2);
+    octx.strokeStyle=acc;octx.lineWidth=3;octx.stroke();octx.shadowBlur=0;
+    drawCircleWithText(octx,s,cx,cy,r,acc,W,H);
 
-  if(img){
-    // ── Imagen dentro del círculo (clip) ──
-    octx.save();
-    octx.beginPath();
-    octx.arc(cx, cy, r, 0, Math.PI*2);
-    octx.clip();
-    // Imagen cover dentro del círculo
-    const iw = img.naturalWidth, ih = img.naturalHeight;
-    const scale = Math.max((r*2)/iw, (r*2)/ih);
-    const rw = iw*scale, rh = ih*scale;
-    octx.drawImage(img, cx-rw/2, cy-rh/2, rw, rh);
-    octx.restore();
   } else {
-    // Sin imagen: círculo relleno con color acento
-    octx.beginPath(); octx.arc(cx, cy, r, 0, Math.PI*2);
-    octx.fillStyle = acc+'22'; octx.fill();
+    // Cuadrado o Tarjeta
+    const isSquare=shape==='square';
+    const cardW=isSquare?Math.min(W,H)*0.78:W*0.82;
+    const cardH=isSquare?cardW:H*0.80;
+    const cardX=cx-cardW/2, cardY=cy-cardH/2;
+    const rad=18;
+    const imgAreaH=cardH*0.62;
+    const textAreaH=cardH-imgAreaH;
+
+    // Fondo tarjeta
+    octx.save();
+    ztRoundRect(octx,cardX,cardY,cardW,cardH,rad);
+    octx.fillStyle=bg; octx.fill();
+    octx.restore();
+
+    // Imagen con contain
+    if(img){
+      octx.save();
+      ztRoundRect(octx,cardX,cardY,cardW,imgAreaH,rad,true);
+      octx.clip();
+      const iw=img.naturalWidth,ih=img.naturalHeight;
+      const sc=Math.min(cardW/iw,imgAreaH/ih);
+      const rw=iw*sc,rh=ih*sc;
+      octx.drawImage(img,cardX+(cardW-rw)/2,cardY+(imgAreaH-rh)/2,rw,rh);
+      octx.restore();
+    }else{
+      octx.save();ztRoundRect(octx,cardX,cardY,cardW,imgAreaH,rad,true);
+      octx.fillStyle=acc+'33';octx.fill();octx.restore();
+    }
+
+    // Separador
+    octx.strokeStyle=acc+'44';octx.lineWidth=1;
+    octx.beginPath();octx.moveTo(cardX+12,cardY+imgAreaH);octx.lineTo(cardX+cardW-12,cardY+imgAreaH);octx.stroke();
+
+    // Texto en área inferior
+    const enText=s.textEn||s.label||'';
+    const phText=s.phonetics?'/'+s.phonetics+'/':'';
+    const fsEn=Math.max(10,Math.min(cardW*0.072,d.fontSize));
+    const maxTW=cardW*0.88;
+    octx.font=`600 ${fsEn}px ${d.font}`;
+    octx.fillStyle=d.textColor||'#fff';
+    octx.textAlign='center';octx.textBaseline='middle';
+    octx.shadowColor='rgba(0,0,0,0.5)';octx.shadowBlur=4;
+    const enLines=getWrappedLines(octx,enText,maxTW);
+    const lineH=fsEn*1.35;
+    const fsPh=Math.max(8,fsEn*0.65);
+    const totalH=enLines.length*lineH+(phText?fsPh*1.4+4:0);
+    let ty=cardY+imgAreaH+(textAreaH-totalH)/2+lineH/2;
+    enLines.forEach(l=>{octx.fillText(l,cx,ty);ty+=lineH;});
+    if(phText){octx.font=`${fsPh}px ${d.font}`;octx.fillStyle='#a5f3fc';octx.shadowBlur=0;octx.fillText(phText,cx,ty+4);}
+    octx.shadowBlur=0;
+
+    // Borde tarjeta
+    octx.shadowColor=acc+'66';octx.shadowBlur=14;
+    ztRoundRect(octx,cardX,cardY,cardW,cardH,rad);
+    octx.strokeStyle=acc;octx.lineWidth=2.5;octx.stroke();
+    octx.shadowBlur=0;
   }
-
-  // Borde del círculo
-  octx.shadowColor = acc+'66'; octx.shadowBlur = 18;
-  octx.beginPath(); octx.arc(cx, cy, r, 0, Math.PI*2);
-  octx.strokeStyle = acc; octx.lineWidth = 3; octx.stroke();
-  octx.shadowBlur = 0;
-
-  drawCircleWithText(octx, s, cx, cy, r, acc, W, H);
 }
 
 function drawCircleWithText(octx, s, cx, cy, r, acc, W, H){
@@ -1773,37 +1846,54 @@ function rebuildCurrentScene(mode){
 function drawSceneCanvasNoText(octx, s, i, W, H, img){
   const bg  = STATE.design.bgColor||'#1a1a2e';
   const acc = ['#7c6af7','#5eead4','#f472b6','#fbbf24','#34d399','#a78bfa'][i%6];
+  const shape = STATE.design.shape || 'circle';
+  const cx=W/2, cy=H/2;
   octx.clearRect(0,0,W,H);
   octx.strokeStyle=acc+'18'; octx.lineWidth=1;
   for(let x=0;x<W;x+=W/8){octx.beginPath();octx.moveTo(x,0);octx.lineTo(x,H);octx.stroke();}
   for(let y=0;y<H;y+=H/5){octx.beginPath();octx.moveTo(0,y);octx.lineTo(W,y);octx.stroke();}
-  const r=Math.min(W,H)*0.38;
-  const cx=W/2, cy=H/2;
-  if(img){
-    octx.save();
-    octx.beginPath(); octx.arc(cx,cy,r,0,Math.PI*2); octx.clip();
-    const iw=img.naturalWidth,ih=img.naturalHeight;
-    const scale=Math.max((r*2)/iw,(r*2)/ih);
-    const rw=iw*scale,rh=ih*scale;
-    octx.drawImage(img,cx-rw/2,cy-rh/2,rw,rh);
-    
-    octx.restore();
+
+  if(shape==='circle'){
+    const r=Math.min(W,H)*0.38;
+    if(img){
+      octx.save();octx.beginPath();octx.arc(cx,cy,r,0,Math.PI*2);octx.clip();
+      const iw=img.naturalWidth,ih=img.naturalHeight;
+      const sc=Math.max((r*2)/iw,(r*2)/ih);
+      octx.drawImage(img,cx-iw*sc/2,cy-ih*sc/2,iw*sc,ih*sc);
+      octx.restore();
+    }else{octx.beginPath();octx.arc(cx,cy,r,0,Math.PI*2);octx.fillStyle=acc+'22';octx.fill();}
+    octx.shadowColor=acc+'66';octx.shadowBlur=18;
+    octx.beginPath();octx.arc(cx,cy,r,0,Math.PI*2);
+    octx.strokeStyle=acc;octx.lineWidth=3;octx.stroke();
+    octx.shadowBlur=0;
+    // Label semitransparente en warmup
+    const fs=Math.max(11,Math.min(W*0.04,STATE.design.fontSize));
+    octx.font=`600 ${fs}px ${STATE.design.font}`;
+    octx.fillStyle=STATE.design.textColor||'#ffffff';
+    octx.textAlign='center';octx.textBaseline='middle';
+    octx.globalAlpha=0.6;
+    wrapText(octx,s.label||'',cx,cy,r*1.7,fs*1.3);
+    octx.globalAlpha=1;
   } else {
-    octx.beginPath(); octx.arc(cx,cy,r,0,Math.PI*2);
-    octx.fillStyle=acc+'22'; octx.fill();
+    // Cuadrado/Tarjeta en warmup: mostrar solo imagen sin texto
+    const isSquare=shape==='square';
+    const cardW=isSquare?Math.min(W,H)*0.78:W*0.82;
+    const cardH=isSquare?cardW:H*0.80;
+    const cardX=cx-cardW/2,cardY=cy-cardH/2;
+    const rad=18;
+    octx.save();ztRoundRect(octx,cardX,cardY,cardW,cardH,rad);octx.fillStyle=bg;octx.fill();octx.restore();
+    if(img){
+      octx.save();ztRoundRect(octx,cardX,cardY,cardW,cardH,rad);octx.clip();
+      const iw=img.naturalWidth,ih=img.naturalHeight;
+      const sc=Math.min(cardW/iw,cardH/ih);
+      const rw=iw*sc,rh=ih*sc;
+      octx.drawImage(img,cardX+(cardW-rw)/2,cardY+(cardH-rh)/2,rw,rh);
+      octx.restore();
+    }
+    octx.shadowColor=acc+'66';octx.shadowBlur=14;
+    ztRoundRect(octx,cardX,cardY,cardW,cardH,rad);
+    octx.strokeStyle=acc;octx.lineWidth=2.5;octx.stroke();octx.shadowBlur=0;
   }
-  octx.shadowColor=acc+'66'; octx.shadowBlur=18;
-  octx.beginPath();octx.arc(cx,cy,r,0,Math.PI*2);
-  octx.strokeStyle=acc;octx.lineWidth=3;octx.stroke();
-  octx.shadowBlur=0;
-  // Solo label semitransparente en warmup
-  const fs=Math.max(11,Math.min(W*0.04,STATE.design.fontSize));
-  octx.font=`600 ${fs}px ${STATE.design.font}`;
-  octx.fillStyle=STATE.design.textColor||'#ffffff';
-  octx.textAlign='center';octx.textBaseline='middle';
-  octx.globalAlpha=0.6;
-  wrapText(octx,s.label||'',cx,cy,r*1.7,fs*1.3);
-  octx.globalAlpha=1;
 }
 
 // ── TTS ──
